@@ -1,0 +1,216 @@
+import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native'
+import React, { useState, useEffect } from 'react'
+import { useUser } from '@clerk/clerk-expo'
+import { MaterialIcons } from '@expo/vector-icons'
+import { LinearGradient } from 'expo-linear-gradient'
+import { router } from 'expo-router'
+import {
+    spacing,
+    fontSize,
+    iconSize,
+    borderRadius,
+    shadow,
+    components,
+    deviceInfo,
+    responsivePadding
+} from '../../utils/responsive';
+
+export default function Header() {
+    const { user } = useUser();
+    const [currentTime, setCurrentTime] = useState(new Date());
+
+    useEffect(() => {
+        const timer = setInterval(() => {
+            setCurrentTime(new Date());
+        }, 60000); // Update every minute
+
+        return () => clearInterval(timer);
+    }, []);
+
+    const getGreeting = () => {
+        const hour = currentTime.getHours();
+        if (hour < 12) return 'Good Morning';
+        if (hour < 17) return 'Good Afternoon';
+        return 'Good Evening';
+    };
+
+    const getTimeString = () => {
+        return currentTime.toLocaleTimeString('en-US', {
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true
+        });
+    };
+
+    return (
+        <LinearGradient
+            colors={['#667eea', '#764ba2']}
+            style={styles.headerContainer}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+        >
+            <View style={styles.headerContent}>
+                <View style={styles.userInfo}>
+                    <Text style={styles.greetingText}>{getGreeting()}</Text>
+                    <Text style={styles.userName}>{user?.fullName || 'Pet Lover'}</Text>
+                    <Text style={styles.timeText}>{getTimeString()}</Text>
+                </View>
+
+                <View style={styles.rightSection}>
+                    <TouchableOpacity
+                        style={styles.notificationButton}
+                        onPress={() => {
+                            router.push('/(tabs)/inbox');
+                        }}
+                        activeOpacity={0.7}
+                    >
+                        <MaterialIcons name="notifications" size={24} color="white" />
+                        <View style={styles.notificationBadge}>
+                            <Text style={styles.badgeText}>3</Text>
+                        </View>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={styles.profileImageContainer}
+                        onPress={() => router.push('/(tabs)/profile')}
+                    >
+                        <Image
+                            source={{ uri: user?.imageUrl || 'https://via.placeholder.com/50' }}
+                            style={styles.profileImage}
+                        />
+                        <View style={styles.onlineIndicator} />
+                    </TouchableOpacity>
+                </View>
+            </View>
+
+            {/* Quick Stats */}
+            <View style={styles.quickStats}>
+                <View style={styles.statItem}>
+                    <MaterialIcons name="pets" size={16} color="rgba(255,255,255,0.8)" />
+                    <Text style={styles.statText}>Find Pets</Text>
+                </View>
+                <View style={styles.statDivider} />
+                <View style={styles.statItem}>
+                    <MaterialIcons name="favorite" size={16} color="rgba(255,255,255,0.8)" />
+                    <Text style={styles.statText}>Save Favorites</Text>
+                </View>
+                <View style={styles.statDivider} />
+                <View style={styles.statItem}>
+                    <MaterialIcons name="chat" size={16} color="rgba(255,255,255,0.8)" />
+                    <Text style={styles.statText}>Chat & Adopt</Text>
+                </View>
+            </View>
+        </LinearGradient>
+    )
+}
+
+const styles = StyleSheet.create({
+    headerContainer: {
+        borderRadius: borderRadius.lg,
+        marginBottom: spacing.lg,
+        ...shadow.large,
+        shadowColor: '#667eea',
+    },
+    headerContent: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: responsivePadding.horizontal,
+        paddingTop: spacing.lg,
+        paddingBottom: spacing.md,
+    },
+    userInfo: {
+        flex: 1,
+    },
+    greetingText: {
+        fontFamily: 'PermanentMarker-Regular',
+        fontSize: fontSize.lg,
+        color: 'rgba(255,255,255,0.9)',
+        marginBottom: spacing.xs,
+    },
+    userName: {
+        fontFamily: 'Pacifico-Regular',
+        fontSize: deviceInfo.isTablet ? fontSize.hero : fontSize.title,
+        color: 'white',
+        fontWeight: 'bold',
+        marginBottom: spacing.xs / 2,
+    },
+    timeText: {
+        fontFamily: 'PermanentMarker-Regular',
+        fontSize: fontSize.sm,
+        color: 'rgba(255,255,255,0.8)',
+    },
+    rightSection: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: spacing.md,
+    },
+    notificationButton: {
+        position: 'relative',
+        padding: spacing.sm,
+    },
+    notificationBadge: {
+        position: 'absolute',
+        top: spacing.xs,
+        right: spacing.xs,
+        backgroundColor: '#ff6b6b',
+        borderRadius: borderRadius.sm,
+        width: spacing.lg,
+        height: spacing.lg,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    badgeText: {
+        color: 'white',
+        fontSize: fontSize.xs,
+        fontWeight: 'bold',
+    },
+    profileImageContainer: {
+        position: 'relative',
+    },
+    profileImage: {
+        width: components.avatar.medium,
+        height: components.avatar.medium,
+        borderRadius: components.avatar.medium / 2,
+        borderWidth: deviceInfo.isTablet ? 4 : 3,
+        borderColor: 'white',
+    },
+    onlineIndicator: {
+        position: 'absolute',
+        bottom: spacing.xs / 2,
+        right: spacing.xs / 2,
+        width: spacing.md,
+        height: spacing.md,
+        borderRadius: spacing.md / 2,
+        backgroundColor: '#4ecdc4',
+        borderWidth: 2,
+        borderColor: 'white',
+    },
+    quickStats: {
+        flexDirection: deviceInfo.isTablet ? 'row' : 'row',
+        justifyContent: 'space-around',
+        alignItems: 'center',
+        paddingHorizontal: responsivePadding.horizontal,
+        paddingBottom: spacing.lg,
+        paddingTop: spacing.md,
+        flexWrap: deviceInfo.isSmallPhone ? 'wrap' : 'nowrap',
+    },
+    statItem: {
+        flexDirection: deviceInfo.isSmallPhone ? 'column' : 'row',
+        alignItems: 'center',
+        gap: deviceInfo.isSmallPhone ? spacing.xs : spacing.sm,
+        minWidth: deviceInfo.isSmallPhone ? '30%' : 'auto',
+    },
+    statText: {
+        color: 'rgba(255,255,255,0.8)',
+        fontSize: deviceInfo.isSmallPhone ? fontSize.xs : fontSize.sm,
+        fontFamily: 'PermanentMarker-Regular',
+        textAlign: 'center',
+    },
+    statDivider: {
+        width: 1,
+        height: spacing.lg,
+        backgroundColor: 'rgba(255,255,255,0.3)',
+        display: deviceInfo.isSmallPhone ? 'none' : 'flex',
+    },
+});
