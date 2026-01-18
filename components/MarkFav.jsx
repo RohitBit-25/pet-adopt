@@ -1,8 +1,8 @@
 import { View, Text, Pressable, StyleSheet } from 'react-native'
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import Ionicons from '@expo/vector-icons/Ionicons';
-import Shared from './../Shared/Shared'
-import { useUser } from '@clerk/clerk-expo';
+import Shared from '../Shared/Shared'
+import { useFirebaseAuth } from '../context/FirebaseAuthContext';
 import {
     spacing,
     iconSize,
@@ -10,10 +10,15 @@ import {
     shadow,
     deviceInfo
 } from '../utils/responsive';
+import LottieView from 'lottie-react-native';
+import { MaterialIcons } from '@expo/vector-icons';
 
-export default function MarkFav({ pet, color = 'black' }) {
-    const { user } = useUser();
+export default function MarkFav({ pet, color = '#ff6b6b' }) {
+    const { user } = useFirebaseAuth();
     const [favList, setFavList] = useState();
+    const [isAnimating, setIsAnimating] = useState(false);
+    const lottieRef = useRef();
+
     useEffect(() => {
         user && GetFav();
     }, [user])
@@ -36,31 +41,44 @@ export default function MarkFav({ pet, color = 'black' }) {
         await Shared.UpdateFav(user, favResult);
         GetFav();
     }
+
+    const handleToggleFav = async () => {
+        if (favList?.includes(pet.id)) {
+            removeFromFav();
+        } else {
+            AddToFav();
+        }
+        if (!favList?.includes(pet.id)) {
+            setIsAnimating(true);
+            setTimeout(() => setIsAnimating(false), 1200);
+        }
+    }
+
     return (
         <View style={styles.container}>
-            {favList?.includes(pet.id) ?
-                <Pressable
-                    onPress={removeFromFav}
-                    style={styles.favoriteButton}
-                    android_ripple={{ color: 'rgba(255,255,255,0.3)' }}
-                >
-                    <Ionicons
-                        name="heart"
-                        size={deviceInfo.isTablet ? iconSize.xl : iconSize.lg}
-                        color="red"
-                    />
-                </Pressable> :
-                <Pressable
-                    onPress={() => AddToFav()}
-                    style={styles.favoriteButton}
-                    android_ripple={{ color: 'rgba(255,255,255,0.3)' }}
-                >
-                    <Ionicons
-                        name="heart-outline"
-                        size={deviceInfo.isTablet ? iconSize.xl : iconSize.lg}
+            <Pressable
+                onPress={handleToggleFav}
+                style={styles.favoriteButton}
+                android_ripple={{ color: 'rgba(255,255,255,0.3)' }}
+            >
+                <View style={{ position: 'relative', width: 32, height: 32, justifyContent: 'center', alignItems: 'center' }}>
+                    {isAnimating && (
+                        <LottieView
+                            ref={lottieRef}
+                            source={require('../assets/lottie/heart-burst.json')}
+                            autoPlay
+                            loop={false}
+                            style={{ position: 'absolute', width: 48, height: 48, left: -8, top: -8, zIndex: 2 }}
+                        />
+                    )}
+                    <MaterialIcons
+                        name={favList?.includes(pet.id) ? 'favorite' : 'favorite-border'}
+                        size={28}
                         color={color}
+                        style={{ zIndex: 3 }}
                     />
-                </Pressable>}
+                </View>
+            </Pressable>
         </View>
     )
 }

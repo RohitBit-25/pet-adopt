@@ -5,10 +5,11 @@ import { collection, getDocs } from 'firebase/firestore';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { withSafeComponent } from '../Common/SafeComponent';
+import colors from '../../theme/colors';
+import typography from '../../theme/typography';
 import {
     spacing,
-    fontSize,
-    iconSize,
     borderRadius,
     shadow,
     deviceInfo,
@@ -17,7 +18,7 @@ import {
     verticalScale
 } from '../../utils/responsive';
 
-export default function Slider() {
+function Slider() {
     const [sliderList, setSliderList] = useState([]);
     const [currentIndex, setCurrentIndex] = useState(0);
     const flatListRef = useRef(null);
@@ -107,9 +108,11 @@ export default function Slider() {
                         style={styles.exploreButton}
                         onPress={() => router.push('/add-new-pet')}
                         activeOpacity={0.8}
+                        accessibilityRole="button"
+                        accessibilityLabel="Explore pets"
                     >
                         <Text style={styles.exploreButtonText}>Explore</Text>
-                        <MaterialIcons name="arrow-forward" size={16} color="white" />
+                        <MaterialIcons name="arrow-forward" size={16} color={colors.textLight} />
                     </TouchableOpacity>
                 </View>
             </View>
@@ -198,8 +201,8 @@ const styles = StyleSheet.create({
         ...shadow.large,
     },
     sliderImage: {
-        width: SCREEN_WIDTH - (spacing.md * 2),
-        height: deviceInfo.isTablet ? verticalScale(250) : verticalScale(200),
+        width: '100%',
+        height: verticalScale(200),
         resizeMode: 'cover',
     },
     imageOverlay: {
@@ -207,7 +210,7 @@ const styles = StyleSheet.create({
         bottom: 0,
         left: 0,
         right: 0,
-        height: '60%',
+        height: '50%',
     },
     slideContent: {
         position: 'absolute',
@@ -216,45 +219,46 @@ const styles = StyleSheet.create({
         right: spacing.lg,
     },
     slideTitle: {
-        fontSize: deviceInfo.isTablet ? fontSize.hero : fontSize.title,
-        fontWeight: 'bold',
-        color: 'white',
-        fontFamily: 'PermanentMarker-Regular',
+        fontSize: typography.fontSize.h2,
+        color: colors.textLight,
+        fontFamily: typography.fontFamily.heading,
+        fontWeight: typography.fontWeight.bold,
         marginBottom: spacing.sm,
     },
     slideSubtitle: {
-        fontSize: deviceInfo.isTablet ? fontSize.xl : fontSize.lg,
+        fontSize: typography.fontSize.body,
         color: 'rgba(255,255,255,0.9)',
-        fontFamily: 'Pacifico-Regular',
+        fontFamily: typography.fontFamily.accent,
         marginBottom: spacing.lg,
-        lineHeight: deviceInfo.isTablet ? 28 : 22,
     },
     exploreButton: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: 'rgba(102, 126, 234, 0.9)',
+        backgroundColor: colors.primary,
         paddingHorizontal: spacing.lg,
-        paddingVertical: spacing.sm,
+        paddingVertical: spacing.md,
         borderRadius: borderRadius.lg,
         alignSelf: 'flex-start',
+        gap: spacing.sm,
     },
     exploreButtonText: {
-        color: 'white',
-        fontSize: fontSize.md,
-        fontWeight: '600',
-        marginRight: spacing.xs,
-        fontFamily: 'PermanentMarker-Regular',
+        color: colors.textLight,
+        fontSize: typography.fontSize.body,
+        fontFamily: typography.fontFamily.heading,
+        fontWeight: typography.fontWeight.bold,
     },
     pagination: {
         flexDirection: 'row',
         justifyContent: 'center',
         alignItems: 'center',
-        marginTop: spacing.lg,
+        marginTop: spacing.md,
         gap: spacing.sm,
     },
     paginationDot: {
-        height: spacing.sm,
-        borderRadius: spacing.xs,
-        backgroundColor: '#667eea',
+        height: 8,
+        borderRadius: 4,
+        backgroundColor: colors.primary,
     },
 });
+
+export default withSafeComponent(Slider);

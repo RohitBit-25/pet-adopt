@@ -15,8 +15,12 @@ import {
     components,
     grid
 } from '../../utils/responsive';
+import { router } from 'expo-router';
+import { withSafeComponent } from '../Common/SafeComponent';
+import colors from '../../theme/colors';
+import typography from '../../theme/typography';
 
-export default function Category({ category }) {
+function Category({ category }) {
     const [categoryList, setCategoryList] = useState([]);
     const [selectedCategory, setSelectedCategory] = useState('Dogs');
 
@@ -27,29 +31,49 @@ export default function Category({ category }) {
             name: 'Dogs',
             imageUrl: 'https://images.unsplash.com/photo-1552053831-71594a27632d?w=200',
             icon: 'pets',
-            color: '#667eea'
+            color: '#667eea',
+            count: 150
         },
         {
             id: 2,
             name: 'Cats',
             imageUrl: 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=200',
             icon: 'pets',
-            color: '#764ba2'
+            color: '#764ba2',
+            count: 120
         },
         {
             id: 3,
             name: 'Birds',
             imageUrl: 'https://images.unsplash.com/photo-1444464666168-49d633b86797?w=200',
             icon: 'flutter-dash',
-            color: '#ff6b6b'
+            color: '#ff6b6b',
+            count: 45
         },
         {
             id: 4,
             name: 'Fish',
             imageUrl: 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=200',
             icon: 'water',
-            color: '#4ecdc4'
+            color: '#4ecdc4',
+            count: 30
         },
+        {
+            id: 5,
+            name: 'Rabbits',
+            imageUrl: 'https://images.unsplash.com/photo-1585110396000-c9ffd4e4b308?w=200',
+            icon: 'pets',
+            color: '#ffa500',
+            count: 25
+        },
+        {
+            id: 6,
+            name: 'Others',
+            imageUrl: 'https://images.unsplash.com/photo-1548199973-03cce0bbc87b?w=200',
+            icon: 'more-horiz',
+            color: '#ff0000',
+            count: 35
+        }
     ];
 
     useEffect(() => {
@@ -76,65 +100,65 @@ export default function Category({ category }) {
 
     const displayData = categoryList.length > 0 ? categoryList : defaultCategories;
 
+    const handleCategoryPress = (category) => {
+        // Navigate to filtered pet list
+        router.push({
+            pathname: '/(tabs)/home',
+            params: { category: category.name.toLowerCase() }
+        });
+    };
 
+    const renderCategoryItem = (item) => (
+        <TouchableOpacity
+            key={item.id}
+            style={styles.categoryItem}
+            onPress={() => {
+                setSelectedCategory(item.name);
+                handleCategoryPress(item);
+            }}
+            activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel={`${item.name} category with ${item.count} pets`}
+        >
+            <View style={styles.categoryContent}>
+                <View style={styles.imageContainer}>
+                    <Image
+                        source={{ uri: item?.imageUrl }}
+                        style={styles.categoryImage}
+                    />
+                    <LinearGradient
+                        colors={['transparent', 'rgba(0,0,0,0.6)']}
+                        style={styles.imageOverlay}
+                    />
+                    <View style={styles.iconContainer}>
+                        <MaterialIcons name={item?.icon} size={24} color={colors.textLight} />
+                    </View>
+                </View>
+                <View style={styles.categoryInfo}>
+                    <Text style={styles.categoryName}>{item?.name}</Text>
+                    <Text style={styles.categoryCount}>{item?.count} pets</Text>
+                </View>
+            </View>
+        </TouchableOpacity>
+    );
 
     return (
         <View style={styles.container}>
-            <View style={styles.headerContainer}>
-                <Text style={styles.title}>Categories</Text>
-                <Text style={styles.subtitle}>Choose your favorite pet type</Text>
+            <View style={styles.header}>
+                <Text style={styles.title}>Pet Categories</Text>
+                <TouchableOpacity
+                    style={styles.viewAllButton}
+                    onPress={() => router.push('/(tabs)/home')}
+                    accessibilityRole="button"
+                    accessibilityLabel="View all categories"
+                >
+                    <Text style={styles.viewAllText}>View All</Text>
+                    <MaterialIcons name="arrow-forward" size={16} color={colors.primary} />
+                </TouchableOpacity>
             </View>
 
             <View style={styles.categoriesGrid}>
-                {displayData.map((item, index) => {
-                    const isSelected = selectedCategory === item.name;
-
-                    return (
-                        <TouchableOpacity
-                            key={item.id || index}
-                            onPress={() => {
-                                setSelectedCategory(item.name);
-                                category(item.name);
-                            }}
-                            style={styles.categoryItemContainer}
-                            activeOpacity={0.7}
-                        >
-                            <View style={[
-                                styles.categoryCard,
-                                isSelected && styles.selectedCategoryCard
-                            ]}>
-                                {isSelected && (
-                                    <LinearGradient
-                                        colors={[item.color || '#667eea', `${item.color || '#667eea'}80`]}
-                                        style={styles.selectedGradient}
-                                    />
-                                )}
-
-                                <View style={[
-                                    styles.imageContainer,
-                                    isSelected && styles.selectedImageContainer
-                                ]}>
-                                    <Image
-                                        source={{ uri: item?.imageUrl }}
-                                        style={styles.categoryImage}
-                                    />
-                                    {isSelected && (
-                                        <View style={styles.selectedOverlay}>
-                                            <MaterialIcons name="check-circle" size={20} color="white" />
-                                        </View>
-                                    )}
-                                </View>
-
-                                <Text style={[
-                                    styles.categoryName,
-                                    isSelected && styles.selectedCategoryName
-                                ]}>
-                                    {item?.name}
-                                </Text>
-                            </View>
-                        </TouchableOpacity>
-                    );
-                })}
+                {displayData.map(renderCategoryItem)}
             </View>
         </View>
     );
@@ -142,91 +166,88 @@ export default function Category({ category }) {
 
 const styles = StyleSheet.create({
     container: {
-        marginTop: spacing.lg,
-        marginBottom: spacing.md,
+        marginBottom: spacing.xl,
     },
-    headerContainer: {
+    header: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
         marginBottom: spacing.lg,
+        paddingHorizontal: responsivePadding.horizontal,
     },
     title: {
-        fontFamily: 'PermanentMarker-Regular',
-        fontSize: deviceInfo.isTablet ? fontSize.title : fontSize.xl,
-        color: '#333',
-        marginBottom: spacing.xs,
+        fontSize: typography.fontSize.h3,
+        color: colors.text,
+        fontFamily: typography.fontFamily.heading,
+        fontWeight: typography.fontWeight.bold,
     },
-    subtitle: {
-        fontFamily: 'Pacifico-Regular',
-        fontSize: deviceInfo.isTablet ? fontSize.lg : fontSize.md,
-        color: '#666',
+    viewAllButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: spacing.xs,
+    },
+    viewAllText: {
+        fontSize: typography.fontSize.body,
+        color: colors.primary,
+        fontFamily: typography.fontFamily.accent,
+        fontWeight: typography.fontWeight.bold,
     },
     categoriesGrid: {
         flexDirection: 'row',
         flexWrap: 'wrap',
         justifyContent: 'space-between',
-        paddingHorizontal: spacing.xs,
+        paddingHorizontal: responsivePadding.horizontal,
+        gap: spacing.md,
     },
-    categoryItemContainer: {
-        width: deviceInfo.isTablet ? '22%' : '23%',
-        margin: spacing.xs,
-        marginBottom: spacing.md,
-    },
-    categoryCard: {
-        backgroundColor: 'white',
+    categoryItem: {
+        width: deviceInfo.isTablet ? '30%' : '48%',
         borderRadius: borderRadius.lg,
-        padding: deviceInfo.isTablet ? spacing.lg : spacing.md,
-        alignItems: 'center',
-        ...shadow.small,
-        borderWidth: 2,
-        borderColor: 'transparent',
-        position: 'relative',
         overflow: 'hidden',
-        minHeight: deviceInfo.isTablet ? 100 : 80,
-    },
-    selectedCategoryCard: {
-        borderColor: '#667eea',
-        transform: [{ scale: deviceInfo.isTablet ? 1.03 : 1.05 }],
         ...shadow.medium,
+        backgroundColor: colors.surface,
     },
-    selectedGradient: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        opacity: 0.1,
+    categoryContent: {
+        position: 'relative',
     },
     imageContainer: {
         position: 'relative',
-        marginBottom: spacing.sm,
-    },
-    selectedImageContainer: {
-        transform: [{ scale: 1.1 }],
+        height: deviceInfo.isTablet ? 120 : 100,
     },
     categoryImage: {
-        width: deviceInfo.isTablet ? iconSize.xxl + 8 : iconSize.xl,
-        height: deviceInfo.isTablet ? iconSize.xxl + 8 : iconSize.xl,
-        borderRadius: (deviceInfo.isTablet ? iconSize.xxl + 8 : iconSize.xl) / 2,
+        width: '100%',
+        height: '100%',
+        resizeMode: 'cover',
     },
-    selectedOverlay: {
+    imageOverlay: {
         position: 'absolute',
-        top: -spacing.xs,
-        right: -spacing.xs,
-        backgroundColor: '#667eea',
-        borderRadius: spacing.md,
-        width: spacing.lg,
-        height: spacing.lg,
-        justifyContent: 'center',
-        alignItems: 'center',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        height: '40%',
+    },
+    iconContainer: {
+        position: 'absolute',
+        top: spacing.sm,
+        right: spacing.sm,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        borderRadius: borderRadius.sm,
+        padding: spacing.xs,
+    },
+    categoryInfo: {
+        padding: spacing.md,
     },
     categoryName: {
-        fontFamily: 'PermanentMarker-Regular',
-        fontSize: deviceInfo.isTablet ? fontSize.md : fontSize.sm,
-        color: '#333',
-        textAlign: 'center',
-        lineHeight: deviceInfo.isTablet ? 18 : 16,
+        fontSize: typography.fontSize.body,
+        color: colors.text,
+        fontFamily: typography.fontFamily.heading,
+        fontWeight: typography.fontWeight.bold,
+        marginBottom: spacing.xs,
     },
-    selectedCategoryName: {
-        color: '#667eea',
-        fontWeight: 'bold',
+    categoryCount: {
+        fontSize: typography.fontSize.small,
+        color: colors.textSecondary,
+        fontFamily: typography.fontFamily.regular,
     },
 });
+
+export default withSafeComponent(Category);

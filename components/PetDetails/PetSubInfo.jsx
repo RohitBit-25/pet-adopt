@@ -37,6 +37,11 @@ export default function PetSubInfo({ pet }) {
                     title={"Weight"}
                     value={pet?.weight + "Kg"}
                 />
+                <PetSubInfoCard
+                    icon={require('./../../assets/images/neutered.png')}
+                    title={"Neutered/Spayed"}
+                    value={pet?.isNeutered ? "Yes" : "No"}
+                />
 
             </View>
 

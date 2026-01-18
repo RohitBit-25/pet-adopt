@@ -1,171 +1,168 @@
-import { View, Text, StyleSheet, TouchableOpacity, FlatList } from 'react-native'
-import React, { useState } from 'react'
-import Header from '../../components/Home/Header'
-import Slider from '../../components/Home/Slider'
-import PetListCategory from '../../components/Home/PetListCategory'
-import SearchBar from '../../components/Home/SearchBar'
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { Link, router } from 'expo-router'
-import { LinearGradient } from 'expo-linear-gradient';
+import { View, StyleSheet, ScrollView, RefreshControl } from 'react-native';
+import { useState, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
+import { withSafeComponent } from '../../components/Common/SafeComponent';
+import Header from '../../components/Home/Header';
+import SearchBar from '../../components/Home/SearchBar';
+import Slider from '../../components/Home/Slider';
+import Category from '../../components/Home/Category';
+import PetListCategory from '../../components/Home/PetListCategory';
+import colors from '../../theme/colors';
 import {
     spacing,
-    fontSize,
-    iconSize,
-    borderRadius,
-    shadow,
-    deviceInfo,
-    responsivePadding,
-    components
+    deviceInfo
 } from '../../utils/responsive';
+import { useRouter } from 'expo-router';
+import { TouchableOpacity } from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
 
-export default function Home() {
-    const [searchQuery, setSearchQuery] = useState('');
+function HomeScreen() {
+    const [refreshing, setRefreshing] = useState(false);
+    const [refreshSignal, setRefreshSignal] = useState(0);
+    const router = useRouter();
+
+    useFocusEffect(
+        useCallback(() => {
+            // Refresh data when screen comes into focus
+            handleRefresh();
+        }, [])
+    );
 
     const handleSearch = (query) => {
-        setSearchQuery(query);
-        console.log('Searching for:', query);
+        // You can implement search logic here
+        if (__DEV__) {
+            console.log('Search query:', query);
+        }
     };
 
     const handleFilter = () => {
-        console.log('Filter pressed');
+        // You can implement filter logic here
+        if (__DEV__) {
+            console.log('Filter pressed');
+        }
     };
 
-    // Create data array for FlatList with different component types
-    const homeData = [
-        { id: 'header', type: 'header' },
-        { id: 'search', type: 'search' },
-        { id: 'slider', type: 'slider' },
-        { id: 'petList', type: 'petList' },
-        { id: 'addPet', type: 'addPet' },
-        { id: 'spacer', type: 'spacer' },
-    ];
-
-    const renderHomeItem = ({ item }) => {
-        switch (item.type) {
-            case 'header':
-                return <Header />;
-
-            case 'search':
-                return (
-                    <View style={styles.sectionContainer}>
-                        <SearchBar onSearch={handleSearch} onFilter={handleFilter} />
-                    </View>
-                );
-
-            case 'slider':
-                return (
-                    <View style={styles.sectionContainer}>
-                        <Slider />
-                    </View>
-                );
-
-            case 'petList':
-                return (
-                    <View style={styles.sectionContainer}>
-                        <PetListCategory searchQuery={searchQuery} />
-                    </View>
-                );
-
-            case 'addPet':
-                return (
-                    <View style={styles.sectionContainer}>
-                        <TouchableOpacity
-                            style={styles.addNewPetContainer}
-                            onPress={() => router.push('/add-new-pet')}
-                            activeOpacity={0.8}
-                        >
-                            <LinearGradient
-                                colors={['#667eea', '#764ba2']}
-                                style={styles.addNewPetGradient}
-                                start={{ x: 0, y: 0 }}
-                                end={{ x: 1, y: 0 }}
-                            >
-                                <View style={styles.addNewPetContent}>
-                                    <View style={styles.iconContainer}>
-                                        <MaterialIcons name="pets" size={28} color="white" />
-                                    </View>
-                                    <View style={styles.textContainer}>
-                                        <Text style={styles.addNewPetTitle}>Add New Pet</Text>
-                                        <Text style={styles.addNewPetSubtitle}>Help a pet find a home</Text>
-                                    </View>
-                                    <MaterialIcons name="arrow-forward" size={24} color="white" />
-                                </View>
-                            </LinearGradient>
-                        </TouchableOpacity>
-                    </View>
-                );
-
-            case 'spacer':
-                return <View style={{ height: spacing.xxl * 2 }} />;
-
-            default:
-                return null;
+    const handleRefresh = async () => {
+        setRefreshing(true);
+        try {
+            setRefreshSignal((prev) => prev + 1);
+            await new Promise(resolve => setTimeout(resolve, 1000));
+        } catch (error) {
+            if (__DEV__) {
+                console.error('Refresh error:', error);
+            }
+        } finally {
+            setRefreshing(false);
         }
     };
 
     return (
-        <FlatList
-            style={styles.container}
-            data={homeData}
-            renderItem={renderHomeItem}
-            keyExtractor={(item) => item.id}
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.contentContainer}
-        />
-    )
+        <View style={{ flex: 1 }}>
+            <ScrollView
+                style={styles.container}
+                contentContainerStyle={styles.contentContainer}
+                showsVerticalScrollIndicator={false}
+                refreshControl={
+                    <RefreshControl
+                        refreshing={refreshing}
+                        onRefresh={handleRefresh}
+                        colors={[colors.primary]}
+                        tintColor={colors.primary}
+                    />
+                }
+            >
+                {/* Header Section */}
+                <Header />
+
+                {/* Search Section */}
+                <SearchBar
+                    onSearch={handleSearch}
+                    onFilter={handleFilter}
+                />
+
+                {/* Slider Section */}
+                <Slider />
+
+                {/* Categories Section */}
+                <Category />
+
+                {/* Featured Pets Section */}
+                <PetListCategory
+                    title="Featured Pets"
+                    subtitle="Hand-picked pets for you"
+                    category="all"
+                    showViewAll={true}
+                    refreshSignal={refreshSignal}
+                />
+
+                {/* Dogs Section */}
+                <PetListCategory
+                    title="Dogs"
+                    subtitle="Loyal companions waiting for you"
+                    category="dogs"
+                    showViewAll={true}
+                    refreshSignal={refreshSignal}
+                />
+
+                {/* Cats Section */}
+                <PetListCategory
+                    title="Cats"
+                    subtitle="Independent and loving friends"
+                    category="cats"
+                    showViewAll={true}
+                    refreshSignal={refreshSignal}
+                />
+
+                {/* Other Pets Section */}
+                <PetListCategory
+                    title="Other Pets"
+                    subtitle="Unique pets looking for homes"
+                    category="others"
+                    showViewAll={true}
+                    refreshSignal={refreshSignal}
+                />
+
+                {/* Bottom Spacing */}
+                <View style={styles.bottomSpacing} />
+            </ScrollView>
+            <TouchableOpacity
+                style={styles.fab}
+                onPress={() => router.push('/add-new-pet')}
+                accessibilityRole="button"
+                accessibilityLabel="Add New Pet"
+            >
+                <Ionicons name="add-circle" size={64} color={colors.primary} />
+            </TouchableOpacity>
+        </View>
+    );
 }
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#f8f9fa',
+        backgroundColor: colors.background,
     },
     contentContainer: {
-        paddingTop: deviceInfo.statusBarHeight + spacing.lg,
-        paddingBottom: spacing.xxl,
+        paddingTop: deviceInfo.isTablet ? spacing.xl : spacing.lg,
+        paddingBottom: spacing.xl,
     },
-    sectionContainer: {
-        paddingHorizontal: responsivePadding.horizontal,
+    bottomSpacing: {
+        height: spacing.xl,
     },
-    addNewPetContainer: {
-        marginTop: spacing.lg,
-        marginBottom: spacing.md,
-        borderRadius: borderRadius.lg,
-        overflow: 'hidden',
-        ...shadow.large,
-        shadowColor: '#667eea',
+    fab: {
+        position: 'absolute',
+        right: spacing.xl,
+        bottom: spacing.xl,
+        zIndex: 10,
+        backgroundColor: 'white',
+        borderRadius: 32,
+        padding: 4,
+        elevation: 6,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 4,
     },
-    addNewPetGradient: {
-        paddingVertical: spacing.lg,
-        paddingHorizontal: spacing.lg,
-    },
-    addNewPetContent: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-    },
-    iconContainer: {
-        width: components.avatar.medium,
-        height: components.avatar.medium,
-        borderRadius: components.avatar.medium / 2,
-        backgroundColor: 'rgba(255,255,255,0.2)',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    textContainer: {
-        flex: 1,
-        marginLeft: spacing.lg,
-    },
-    addNewPetTitle: {
-        fontFamily: 'PermanentMarker-Regular',
-        fontSize: deviceInfo.isTablet ? fontSize.title : fontSize.xl,
-        color: 'white',
-        fontWeight: 'bold',
-    },
-    addNewPetSubtitle: {
-        fontFamily: 'Pacifico-Regular',
-        fontSize: deviceInfo.isTablet ? fontSize.lg : fontSize.md,
-        color: 'rgba(255,255,255,0.9)',
-        marginTop: spacing.xs / 2,
-    },
-})
+});
+
+export default withSafeComponent(HomeScreen);

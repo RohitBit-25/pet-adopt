@@ -1,174 +1,214 @@
-import { View, Text, FlatList, ActivityIndicator } from 'react-native'
-import React, { useEffect, useState, useCallback } from 'react'
-import Category from './Category'
-import { collection, getDocs, query, where, onSnapshot } from 'firebase/firestore'
-import PetListItem from './PetListItem'
+import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native'
+import React, { useState, useEffect } from 'react'
+import { MaterialIcons } from '@expo/vector-icons'
+import { collection, getDocs, query, where, orderBy, limit } from 'firebase/firestore'
 import { db } from '../../config/FirebaseConfig'
+import { withSafeComponent } from '../Common/SafeComponent'
+import PetListItem from './PetListItem'
+import EmptyState from '../Common/EmptyState'
+import Loader from '../Common/Loader'
+import colors from '../../theme/colors'
+import typography from '../../theme/typography'
 import {
     spacing,
-    fontSize,
+    borderRadius,
+    shadow,
     deviceInfo,
-    responsivePadding,
-    grid
-} from '../../utils/responsive';
+    responsivePadding
+} from '../../utils/responsive'
 
-export default function PetListCategory({ searchQuery = '' }) {
-    const [petList, setPetList] = useState([]);
-    const [allPets, setAllPets] = useState([]);
-    const [loader, setLoader] = useState(false);
-    const [selectedCategory, setSelectedCategory] = useState('Dogs');
+function PetListCategory({ category, title, subtitle, showViewAll = true, refreshSignal }) {
+    const [pets, setPets] = useState([]);
+    const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
-    // Real-time pet fetching with Firebase onSnapshot
-    const GetPetList = useCallback((category) => {
-        setLoader(true);
+    useEffect(() => {
+        fetchPets();
+    }, [category]);
+
+    useEffect(() => {
+        if (refreshSignal !== undefined) {
+            fetchPets();
+        }
+    }, [refreshSignal]);
+
+    const fetchPets = async () => {
+        setLoading(true);
         setError(null);
-        setSelectedCategory(category);
 
         try {
-            const q = query(
-                collection(db, 'Pets'),
-                where('Category', '==', category)
-            );
+            let petsQuery = collection(db, 'Pets');
 
-            // Set up real-time listener
-            const unsubscribe = onSnapshot(q,
-                (querySnapshot) => {
-                    const pets = querySnapshot.docs.map(doc => ({
-                        id: doc.id,
-                        ...doc.data()
-                    }));
-                    setAllPets(pets);
-                    setPetList(pets);
-                    setLoader(false);
-                },
-                (error) => {
-                    console.error("Error fetching pets:", error);
-                    setError("Failed to load pets. Please try again.");
-                    setLoader(false);
-                }
-            );
-
-            // Return unsubscribe function for cleanup
-            return unsubscribe;
-        } catch (error) {
-            console.error("Error setting up pet listener:", error);
-            setError("Failed to load pets. Please try again.");
-            setLoader(false);
-        }
-    }, []);
-
-    useEffect(() => {
-        const unsubscribe = GetPetList('Dogs');
-
-        // Cleanup function
-        return () => {
-            if (unsubscribe && typeof unsubscribe === 'function') {
-                unsubscribe();
+            // Add category filter if specified
+            if (category && category !== 'all') {
+                petsQuery = query(
+                    petsQuery,
+                    where('category', '==', category.toLowerCase())
+                );
             }
-        };
-    }, [GetPetList]);
 
-    // Filter pets based on search query
-    useEffect(() => {
-        if (searchQuery && searchQuery.length > 0) {
-            const filtered = allPets.filter(pet =>
-                pet.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                pet.breed?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                pet.Category?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                pet.address?.toLowerCase().includes(searchQuery.toLowerCase())
+            // Add ordering and limit
+            petsQuery = query(
+                petsQuery,
+                orderBy('createdAt', 'desc'),
+                limit(10)
             );
-            setPetList(filtered);
-        } else {
-            setPetList(allPets);
-        }
-    }, [searchQuery, allPets]);
 
-    const handleRefresh = () => {
-        GetPetList(selectedCategory);
+            const querySnapshot = await getDocs(petsQuery);
+            const petsData = querySnapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            }));
+
+            setPets(petsData);
+        } catch (error) {
+            console.error('Error fetching pets:', error);
+            setError('Failed to load pets');
+        } finally {
+            setLoading(false);
+        }
     };
 
-    const renderEmptyComponent = () => {
-        if (loader) {
-            return (
-                <View style={styles.centerContainer}>
-                    <ActivityIndicator size="large" color="#667eea" />
-                    <Text style={styles.loadingText}>Loading pets...</Text>
-                </View>
-            );
-        }
-
-        if (error) {
-            return (
-                <View style={styles.centerContainer}>
-                    <Text style={styles.errorText}>{error}</Text>
-                </View>
-            );
-        }
-
-        return (
-            <View style={styles.centerContainer}>
-                <Text style={styles.emptyText}>No pets found in this category.</Text>
-                <Text style={styles.emptySubText}>Be the first to add a pet!</Text>
-            </View>
+    const handleFavoriteToggle = (petId, isFavorite) => {
+        setPets(prevPets =>
+            prevPets.map(pet =>
+                pet.id === petId
+                    ? { ...pet, isFavorite }
+                    : pet
+            )
         );
     };
 
+    const renderPetItem = ({ item }) => (
+        <PetListItem
+            item={item}
+            onFavoriteToggle={handleFavoriteToggle}
+        />
+    );
+
+    const renderHeader = () => (
+        <View style={styles.header}>
+            <View style={styles.titleContainer}>
+                <Text style={styles.title}>{title || 'Available Pets'}</Text>
+                {subtitle && (
+                    <Text style={styles.subtitle}>{subtitle}</Text>
+                )}
+            </View>
+            {showViewAll && (
+                <TouchableOpacity
+                    style={styles.viewAllButton}
+                    accessibilityRole="button"
+                    accessibilityLabel="View all pets"
+                >
+                    <Text style={styles.viewAllText}>View All</Text>
+                    <MaterialIcons name="arrow-forward" size={16} color={colors.primary} />
+                </TouchableOpacity>
+            )}
+        </View>
+    );
+
+    const renderEmptyState = () => (
+        <EmptyState
+            title="No Pets Found"
+            message={category ? `No ${category} pets available at the moment` : "No pets available at the moment"}
+            icon="pets"
+            actionText="Refresh"
+            onAction={fetchPets}
+        />
+    );
+
+    if (loading) {
+        return (
+            <View style={styles.container}>
+                {renderHeader()}
+                <Loader size="large" />
+            </View>
+        );
+    }
+
+    if (error) {
+        return (
+            <View style={styles.container}>
+                {renderHeader()}
+                <EmptyState
+                    title="Error Loading Pets"
+                    message={error}
+                    icon="error"
+                    actionText="Try Again"
+                    onAction={fetchPets}
+                />
+            </View>
+        );
+    }
+
     return (
-        <View>
-            <Category category={GetPetList} />
-            <FlatList
-                data={petList}
-                horizontal={true}
-                refreshing={loader}
-                onRefresh={handleRefresh}
-                showsHorizontalScrollIndicator={false}
-                keyExtractor={(item) => item.id}
-                renderItem={({ item }) => <PetListItem pet={item} />}
-                ListEmptyComponent={renderEmptyComponent}
-                contentContainerStyle={petList.length === 0 ? styles.emptyContainer : null}
-            />
+        <View style={styles.container}>
+            {renderHeader()}
+
+            {pets.length === 0 ? (
+                renderEmptyState()
+            ) : (
+                <FlatList
+                    data={pets}
+                    renderItem={renderPetItem}
+                    keyExtractor={(item) => item.id}
+                    showsVerticalScrollIndicator={false}
+                    contentContainerStyle={styles.listContainer}
+                    ItemSeparatorComponent={() => <View style={styles.separator} />}
+                />
+            )}
         </View>
     );
 }
 
-const styles = {
-    centerContainer: {
-        flex: 1,
-        justifyContent: 'center',
+const styles = StyleSheet.create({
+    container: {
+        marginBottom: spacing.xl,
+    },
+    header: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
         alignItems: 'center',
-        paddingVertical: spacing.xxl,
+        marginBottom: spacing.lg,
         paddingHorizontal: responsivePadding.horizontal,
     },
-    loadingText: {
-        marginTop: spacing.md,
-        fontSize: deviceInfo.isTablet ? fontSize.xl : fontSize.lg,
-        color: '#667eea',
-        fontFamily: 'PermanentMarker-Regular',
+    titleContainer: {
+        flex: 1,
     },
-    errorText: {
-        fontSize: deviceInfo.isTablet ? fontSize.xl : fontSize.lg,
-        color: '#ff6b6b',
-        textAlign: 'center',
-        fontFamily: 'PermanentMarker-Regular',
+    title: {
+        fontSize: typography.fontSize.h3,
+        color: colors.text,
+        fontFamily: typography.fontFamily.heading,
+        fontWeight: typography.fontWeight.bold,
+        marginBottom: spacing.xs,
     },
-    emptyText: {
-        fontSize: deviceInfo.isTablet ? fontSize.title : fontSize.xl,
-        color: '#666',
-        textAlign: 'center',
-        fontFamily: 'PermanentMarker-Regular',
+    subtitle: {
+        fontSize: typography.fontSize.body,
+        color: colors.textSecondary,
+        fontFamily: typography.fontFamily.accent,
     },
-    emptySubText: {
-        fontSize: deviceInfo.isTablet ? fontSize.lg : fontSize.md,
-        color: '#999',
-        textAlign: 'center',
-        marginTop: spacing.xs,
-        fontFamily: 'Pacifico-Regular',
-        lineHeight: deviceInfo.isTablet ? 24 : 20,
+    viewAllButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: spacing.xs,
+        paddingVertical: spacing.sm,
+        paddingHorizontal: spacing.md,
+        backgroundColor: colors.surface,
+        borderRadius: borderRadius.sm,
+        ...shadow.small,
     },
-    emptyContainer: {
-        flexGrow: 1,
-        justifyContent: 'center',
-        minHeight: deviceInfo.isTablet ? 300 : 200,
+    viewAllText: {
+        fontSize: typography.fontSize.body,
+        color: colors.primary,
+        fontFamily: typography.fontFamily.accent,
+        fontWeight: typography.fontWeight.bold,
     },
-};
+    listContainer: {
+        paddingHorizontal: responsivePadding.horizontal,
+    },
+    separator: {
+        height: spacing.md,
+    },
+});
+
+export default withSafeComponent(PetListCategory);

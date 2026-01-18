@@ -1,32 +1,30 @@
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert, Animated } from 'react-native';
-import React, { useEffect, useState, useRef } from 'react';
-import { router, useLocalSearchParams, useNavigation } from 'expo-router';
+import React, { useEffect } from 'react';
+import { View, ScrollView, StyleSheet, Pressable } from 'react-native';
+import { useLocalSearchParams, useNavigation } from 'expo-router';
 import PetInfo from '../../components/PetDetails/PetInfo';
 import PetSubInfo from '../../components/PetDetails/PetSubInfo';
 import AboutPet from '../../components/PetDetails/AboutPet';
 import OwnerInfo from '../../components/PetDetails/OwnerInfo';
-import { useUser } from '@clerk/clerk-expo';
-import { collection, doc, getDocs, query, setDoc, where } from 'firebase/firestore';
-import { db } from '../../config/FirebaseConfig';
-import { LinearGradient } from 'expo-linear-gradient';
-import { MaterialIcons } from '@expo/vector-icons';
+import CommentsSection from '../../components/PetDetails/CommentsSection';
+import AnimatedButton from '../../components/Common/AnimatedButton';
+import { useAdoptionFlow } from '../../hooks/useAdoptionFlow';
 import {
-    spacing,
     fontSize,
-    iconSize,
     borderRadius,
-    shadow,
     deviceInfo,
     responsivePadding,
-    components
+    spacing,
+    shadow
 } from '../../utils/responsive';
+import { LinearGradient } from 'expo-linear-gradient';
+import { MaterialIcons } from '@expo/vector-icons';
+import ConfettiOverlay from '../../components/Common/ConfettiOverlay';
+import sharePet from '../../utils/shareUtils';
 
 export default function PetDetails() {
     const pet = useLocalSearchParams();
     const navigation = useNavigation();
-    const { user } = useUser();
-    const [isLoading, setIsLoading] = useState(false);
-    const buttonScale = useRef(new Animated.Value(1)).current;
+    const { isLoading, showConfetti, initiateChat } = useAdoptionFlow();
 
     useEffect(() => {
         navigation.setOptions({
@@ -35,135 +33,7 @@ export default function PetDetails() {
         });
     }, [navigation]);
 
-    // Enhanced adoption flow with better UX
-    const InitiateChat = async () => {
-        if (!user || !user.primaryEmailAddress?.emailAddress) {
-            Alert.alert(
-                "Login Required",
-                "Please login to start chatting with the pet owner.",
-                [{ text: "OK" }]
-            );
-            return;
-        }
-
-        if (!pet?.email) {
-            Alert.alert(
-                "Error",
-                "Pet owner information is not available.",
-                [{ text: "OK" }]
-            );
-            return;
-        }
-
-        // Check if user is trying to adopt their own pet
-        if (user.primaryEmailAddress.emailAddress === pet.email) {
-            Alert.alert(
-                "Cannot Adopt",
-                "You cannot adopt your own pet!",
-                [{ text: "OK" }]
-            );
-            return;
-        }
-
-        // Show confirmation dialog
-        Alert.alert(
-            "Start Adoption Process",
-            `Are you interested in adopting ${pet.name}? This will start a chat with the owner.`,
-            [
-                { text: "Cancel", style: "cancel" },
-                {
-                    text: "Yes, I'm Interested",
-                    onPress: () => handleAdoptionProcess(),
-                    style: "default"
-                }
-            ]
-        );
-    };
-
-    const handleAdoptionProcess = async () => {
-        setIsLoading(true);
-
-        // Button animation
-        Animated.sequence([
-            Animated.timing(buttonScale, {
-                toValue: 0.95,
-                duration: 100,
-                useNativeDriver: true,
-            }),
-            Animated.timing(buttonScale, {
-                toValue: 1,
-                duration: 100,
-                useNativeDriver: true,
-            }),
-        ]).start();
-
-        try {
-            const userEmail = user.primaryEmailAddress.emailAddress;
-            const petOwnerEmail = pet.email;
-            const docId1 = `${userEmail}_${petOwnerEmail}`;
-            const docId2 = `${petOwnerEmail}_${userEmail}`;
-
-            // Check if chat already exists
-            const q = query(collection(db, 'Chat'), where('id', 'in', [docId1, docId2]));
-            const querySnapshot = await getDocs(q);
-
-            if (!querySnapshot.empty) {
-                const chatDoc = querySnapshot.docs[0];
-                router.push({
-                    pathname: '/chat',
-                    params: { id: chatDoc.id },
-                });
-                return;
-            }
-
-            // Create new chat
-            await setDoc(doc(db, 'Chat', docId1), {
-                id: docId1,
-                users: [
-                    {
-                        email: userEmail,
-                        imageUrl: user.imageUrl,
-                        name: user.fullName,
-                    },
-                    {
-                        email: petOwnerEmail,
-                        imageUrl: pet.userImage,
-                        name: pet.username,
-                    }
-                ],
-                userIds: [userEmail, petOwnerEmail],
-                createdAt: new Date().toISOString(),
-                petInfo: {
-                    id: pet.id,
-                    name: pet.name,
-                    imageUrl: pet.imageUrl,
-                }
-            });
-
-            // Success feedback
-            Alert.alert(
-                "Chat Started!",
-                `You can now chat with ${pet.username} about adopting ${pet.name}.`,
-                [{
-                    text: "Start Chatting",
-                    onPress: () => router.push({
-                        pathname: '/chat',
-                        params: { id: docId1 },
-                    })
-                }]
-            );
-
-        } catch (error) {
-            console.error('Error initiating chat:', error);
-            Alert.alert(
-                "Error",
-                "Failed to start chat. Please check your connection and try again.",
-                [{ text: "OK" }]
-            );
-        } finally {
-            setIsLoading(false);
-        }
-    };
+    const handleShare = () => sharePet(pet);
 
     return (
         <View style={styles.container}>
@@ -172,42 +42,43 @@ export default function PetDetails() {
                 <PetSubInfo pet={pet} />
                 <AboutPet pet={pet} />
                 <OwnerInfo pet={pet} />
+                <CommentsSection petId={pet?.id} />
                 <View style={{ height: 100 }} />
             </ScrollView>
 
             {/* Enhanced Adopt Button */}
             <View style={styles.bottomContainer}>
-                <Animated.View style={[styles.adoptButtonContainer, { transform: [{ scale: buttonScale }] }]}>
-                    <TouchableOpacity
-                        onPress={InitiateChat}
-                        style={styles.adoptBtn}
-                        disabled={isLoading}
-                        activeOpacity={0.8}
-                    >
-                        <LinearGradient
-                            colors={isLoading ? ['#ccc', '#999'] : ['#667eea', '#764ba2']}
-                            style={styles.adoptBtnGradient}
-                            start={{ x: 0, y: 0 }}
-                            end={{ x: 1, y: 0 }}
-                        >
-                            <View style={styles.adoptBtnContent}>
-                                {isLoading ? (
-                                    <>
-                                        <MaterialIcons name="hourglass-empty" size={24} color="white" />
-                                        <Text style={styles.adoptBtnText}>Processing...</Text>
-                                    </>
-                                ) : (
-                                    <>
-                                        <MaterialIcons name="favorite" size={24} color="white" />
-                                        <Text style={styles.adoptBtnText}>Adopt Me</Text>
-                                        <MaterialIcons name="arrow-forward" size={20} color="white" />
-                                    </>
-                                )}
-                            </View>
-                        </LinearGradient>
-                    </TouchableOpacity>
-                </Animated.View>
+                <AnimatedButton
+                    onPress={() => initiateChat(pet)}
+                    loading={isLoading}
+                    title="Adopt Me"
+                    icon="favorite"
+                    endIcon="arrow-forward"
+                    style={{
+                        borderRadius: borderRadius.xl,
+                        shadowColor: '#ff6b6b',
+                        shadowOffset: { width: 0, height: 6 },
+                        shadowOpacity: 0.18,
+                        shadowRadius: 12,
+                        elevation: 8,
+                    }}
+                    textStyle={{
+                        fontFamily: 'PermanentMarker-Regular',
+                        fontSize: deviceInfo.isTablet ? fontSize.title : fontSize.xl,
+                    }}
+                />
             </View>
+
+            {/* Share Button */}
+            <View style={styles.shareButton}>
+                <Pressable onPress={handleShare} style={{ borderRadius: 20, overflow: 'hidden' }}>
+                    <LinearGradient colors={['#ff6b6b', '#667eea']} style={{ borderRadius: 20, padding: 8 }}>
+                        <MaterialIcons name="share" size={22} color="white" />
+                    </LinearGradient>
+                </Pressable>
+            </View>
+
+            <ConfettiOverlay visible={showConfetti} />
         </View>
     );
 }
@@ -230,33 +101,10 @@ const styles = StyleSheet.create({
         ...shadow.large,
         shadowOffset: { width: 0, height: -2 },
     },
-    adoptButtonContainer: {
-        borderRadius: borderRadius.xl,
-        overflow: 'hidden',
-        ...shadow.large,
-        shadowColor: '#667eea',
+    shareButton: {
+        position: 'absolute',
+        top: 30,
+        right: 30,
+        zIndex: 10,
     },
-    adoptBtn: {
-        borderRadius: borderRadius.xl,
-        overflow: 'hidden',
-    },
-    adoptBtnGradient: {
-        paddingVertical: deviceInfo.isTablet ? spacing.xl : spacing.lg,
-        paddingHorizontal: spacing.xl,
-        alignItems: 'center',
-        justifyContent: 'center',
-        minHeight: components.button.height,
-    },
-    adoptBtnContent: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: spacing.md,
-    },
-    adoptBtnText: {
-        fontFamily: 'PermanentMarker-Regular',
-        fontSize: deviceInfo.isTablet ? fontSize.title : fontSize.xl,
-        color: 'white',
-        fontWeight: 'bold',
-    }
 });

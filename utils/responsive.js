@@ -1,7 +1,7 @@
-import { Dimensions, Platform, StatusBar } from 'react-native';
+import { Dimensions, Platform, StatusBar } from "react-native";
 
 // Get device dimensions
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
 // Device type detection
 const isTablet = SCREEN_WIDTH >= 768;
@@ -10,11 +10,12 @@ const isMediumPhone = SCREEN_WIDTH >= 375 && SCREEN_WIDTH < 414;
 const isLargePhone = SCREEN_WIDTH >= 414;
 
 // Status bar height
-const STATUS_BAR_HEIGHT = Platform.OS === 'ios' ? 44 : StatusBar.currentHeight || 24;
+const STATUS_BAR_HEIGHT =
+  Platform.OS === "ios" ? 44 : StatusBar.currentHeight || 24;
 
 // Safe area calculations
-const HEADER_HEIGHT = Platform.OS === 'ios' ? 88 : 64;
-const TAB_BAR_HEIGHT = Platform.OS === 'ios' ? 83 : 60;
+const HEADER_HEIGHT = Platform.OS === "ios" ? 88 : 64;
+const TAB_BAR_HEIGHT = Platform.OS === "ios" ? 83 : 60;
 
 // Responsive scaling functions
 const scale = (size) => {
@@ -98,21 +99,21 @@ const borderRadius = {
 // Shadow system
 const shadow = {
   small: {
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: scale(2) },
     shadowOpacity: 0.1,
     shadowRadius: scale(4),
     elevation: 2,
   },
   medium: {
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: scale(4) },
     shadowOpacity: 0.15,
     shadowRadius: scale(8),
     elevation: 4,
   },
   large: {
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: scale(8) },
     shadowOpacity: 0.2,
     shadowRadius: scale(16),

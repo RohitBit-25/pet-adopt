@@ -1,7 +1,8 @@
-import { View, Text, FlatList, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
-import React, { useEffect, useState } from 'react';
+import { View, Text, FlatList, StyleSheet, ActivityIndicator, TouchableOpacity, Pressable, Animated } from 'react-native';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import Shared from '../../Shared/Shared';
-import { useUser } from '@clerk/clerk-expo';
+import { useFirebaseAuth } from '../../context/FirebaseAuthContext';
 import { db } from '../../config/FirebaseConfig';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import PetListItem from '../../components/Home/PetListItem';
@@ -20,50 +21,68 @@ import {
     grid
 } from '../../utils/responsive';
 
+function FavoriteSkeletonCard() {
+    const pulse = useRef(new Animated.Value(0.6)).current;
+    useEffect(() => {
+        Animated.loop(
+            Animated.sequence([
+                Animated.timing(pulse, { toValue: 1, duration: 800, useNativeDriver: true }),
+                Animated.timing(pulse, { toValue: 0.6, duration: 800, useNativeDriver: true }),
+            ])
+        ).start();
+    }, []);
+    return (
+        <Animated.View style={[styles.skeletonContainer, { opacity: pulse }]}>
+            <LinearGradient
+                colors={['#f0f2f5', '#e3e6f3']}
+                style={styles.skeletonGradient}
+            >
+                <View style={styles.skeletonInner}>
+                    <View style={styles.skeletonAvatar} />
+                    <View style={styles.skeletonTextContainer}>
+                        <View style={styles.skeletonTextLong} />
+                        <View style={styles.skeletonTextShort} />
+                    </View>
+                </View>
+            </LinearGradient>
+        </Animated.View>
+    );
+}
+
 export default function Favorite() {
-    const { user } = useUser();
-    const [favIds, setFavIds] = useState([]);
+    const { user } = useFirebaseAuth();
     const [favPetList, setFavPetList] = useState([]);
-    const [loader, setLoader] = useState(false);
+    const [loading, setLoading] = useState(true);
 
-    // Fetch favorite pet IDs
-    useEffect(() => {
-        if (user) GetFavPetIds();
-    }, [user]);
-
-    const GetFavPetIds = async () => {
-        setLoader(true);
-        const result = await Shared.GetFavList(user);
-        setFavIds(result?.favorites || []);
-        setLoader(false);
-    };
-
-    // Fetch favorite pet details when `favIds` updates
-    useEffect(() => {
-        if (favIds.length > 0) {
-            GetFavPetList();
-        } else {
-            setFavPetList([]); // Reset when there are no favorites
-        }
-    }, [favIds]);
-
-    const GetFavPetList = async () => {
-        setLoader(true);
+    const fetchFavoritePets = async () => {
+        setLoading(true);
         try {
-            const q = query(collection(db, 'Pets'), where('id', 'in', favIds));
-            const querySnapshot = await getDocs(q);
+            const favResult = await Shared.GetFavList(user);
+            const favIds = favResult?.favorites || [];
 
-            const pets = [];
-            querySnapshot.forEach((doc) => {
-                pets.push(doc.data());
-            });
-
-            setFavPetList(pets);
+            if (favIds.length > 0) {
+                const q = query(collection(db, 'Pets'), where('id', 'in', favIds));
+                const querySnapshot = await getDocs(q);
+                const pets = querySnapshot.docs.map(doc => doc.data());
+                setFavPetList(pets);
+            } else {
+                setFavPetList([]);
+            }
         } catch (error) {
             console.error("Error fetching favorite pets:", error);
+            // Optionally set an error state here
+        } finally {
+            setLoading(false);
         }
-        setLoader(false);
     };
+
+    useFocusEffect(
+        useCallback(() => {
+            if (user) {
+                fetchFavoritePets();
+            }
+        }, [user])
+    );
 
     const renderEmptyState = () => (
         <View style={styles.emptyContainer}>
@@ -82,65 +101,71 @@ export default function Favorite() {
                 onPress={() => router.push('/(tabs)/home')}
             >
                 <LinearGradient
-                    colors={['#667eea', '#764ba2']}
+                    colors={['#ff6b6b', '#667eea']}
                     style={styles.exploreButtonGradient}
                 >
-                    <MaterialIcons name="explore" size={20} color="white" />
-                    <Text style={styles.exploreButtonText}>Explore Pets</Text>
+                    <MaterialIcons name="pets" size={20} color="white" />
+                    <Text style={styles.exploreButtonText}>Find Pets</Text>
                 </LinearGradient>
             </TouchableOpacity>
         </View>
     );
 
-    const renderPetItem = ({ item, index }) => (
-        <View style={styles.petItemContainer}>
-            <PetListItem pet={item} />
-        </View>
-    );
+    if (loading) {
+        return (
+            <View style={styles.container}>
+                <HeaderComponent favPetCount={0} />
+                <View style={styles.contentContainer}>
+                    <FlatList
+                        data={Array(6).fill(0)}
+                        numColumns={2}
+                        renderItem={() => <FavoriteSkeletonCard />}
+                        keyExtractor={(_, index) => `skeleton-${index}`}
+                        columnWrapperStyle={styles.row}
+                    />
+                </View>
+            </View>
+        );
+    }
 
     return (
         <View style={styles.container}>
-            {/* Header */}
-            <LinearGradient
-                colors={['#667eea', '#764ba2']}
-                style={styles.headerGradient}
-            >
-                <View style={styles.headerContent}>
-                    <MaterialIcons name="favorite" size={32} color="white" />
-                    <View style={styles.headerTextContainer}>
-                        <Text style={styles.headerTitle}>My Favorites</Text>
-                        <Text style={styles.headerSubtitle}>
-                            {favPetList.length} {favPetList.length === 1 ? 'pet' : 'pets'} saved
-                        </Text>
-                    </View>
-                </View>
-            </LinearGradient>
+            <HeaderComponent favPetCount={favPetList.length} />
 
-            {/* Content */}
             <View style={styles.contentContainer}>
-                {loader ? (
-                    <View style={styles.loadingContainer}>
-                        <ActivityIndicator size="large" color="#667eea" />
-                        <Text style={styles.loadingText}>Loading your favorites...</Text>
-                    </View>
-                ) : (
-                    <FlatList
-                        data={favPetList}
-                        numColumns={2}
-                        onRefresh={GetFavPetIds}
-                        refreshing={loader}
-                        keyExtractor={(item) => item.id}
-                        renderItem={renderPetItem}
-                        ListEmptyComponent={renderEmptyState}
-                        showsVerticalScrollIndicator={false}
-                        contentContainerStyle={favPetList.length === 0 ? styles.emptyListContainer : styles.listContainer}
-                        columnWrapperStyle={favPetList.length > 0 ? styles.row : null}
-                    />
-                )}
+                <FlatList
+                    data={favPetList}
+                    numColumns={2}
+                    onRefresh={fetchFavoritePets}
+                    refreshing={loading}
+                    keyExtractor={(item) => item.id}
+                    renderItem={({ item }) => <View style={styles.petItemContainer}><PetListItem pet={item} /></View>}
+                    ListEmptyComponent={renderEmptyState}
+                    showsVerticalScrollIndicator={false}
+                    contentContainerStyle={favPetList.length === 0 ? styles.emptyListContainer : styles.listContainer}
+                    columnWrapperStyle={favPetList.length > 0 ? styles.row : null}
+                />
             </View>
         </View>
     );
 }
+
+const HeaderComponent = ({ favPetCount }) => (
+    <LinearGradient
+        colors={['#667eea', '#764ba2']}
+        style={styles.headerGradient}
+    >
+        <View style={styles.headerContent}>
+            <MaterialIcons name="favorite" size={32} color="white" />
+            <View style={styles.headerTextContainer}>
+                <Text style={styles.headerTitle}>My Favorites</Text>
+                <Text style={styles.headerSubtitle}>
+                    {favPetCount} {favPetCount === 1 ? 'pet' : 'pets'} saved
+                </Text>
+            </View>
+        </View>
+    </LinearGradient>
+);
 
 const styles = StyleSheet.create({
     container: {
@@ -198,11 +223,11 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     row: {
-        justifyContent: 'space-around',
+        justifyContent: 'space-between',
     },
     petItemContainer: {
-        flex: 1,
-        margin: 5,
+        width: '48%',
+        marginBottom: spacing.md,
     },
     emptyContainer: {
         alignItems: 'center',
@@ -254,5 +279,45 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: 'bold',
         fontFamily: 'PermanentMarker-Regular',
+    },
+    skeletonContainer: {
+        borderRadius: 20,
+        marginBottom: 16,
+        backgroundColor: 'transparent',
+        width: '48%',
+    },
+    skeletonGradient: {
+        borderRadius: 20,
+        padding: 2,
+    },
+    skeletonInner: {
+        backgroundColor: 'white',
+        borderRadius: 18,
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 16,
+    },
+    skeletonAvatar: {
+        width: 60,
+        height: 60,
+        borderRadius: 12,
+        backgroundColor: '#e3e6f3',
+        marginRight: 16,
+    },
+    skeletonTextContainer: {
+        flex: 1,
+    },
+    skeletonTextLong: {
+        width: '80%',
+        height: 18,
+        backgroundColor: '#e3e6f3',
+        borderRadius: 8,
+        marginBottom: 8,
+    },
+    skeletonTextShort: {
+        width: '50%',
+        height: 14,
+        backgroundColor: '#e3e6f3',
+        borderRadius: 8,
     },
 });

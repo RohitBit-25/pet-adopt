@@ -1,12 +1,13 @@
-import { View, Text, FlatList, ActivityIndicator, StyleSheet, TouchableOpacity } from 'react-native';
-import React, { useEffect, useState } from 'react';
+import { View, Text, FlatList, ActivityIndicator, StyleSheet, TouchableOpacity, Animated } from 'react-native';
+import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '../../config/FirebaseConfig';
-import { useUser } from '@clerk/clerk-expo';
+import { useFirebaseAuth } from '../../context/FirebaseAuthContext';
 import UserItem from '../../components/Inbox/UserItem';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialIcons } from '@expo/vector-icons';
-import { router } from 'expo-router'
+import { router } from 'expo-router';
 import {
     spacing,
     fontSize,
@@ -16,63 +17,79 @@ import {
     deviceInfo,
     responsivePadding,
     components
-} from '../../utils/responsive';;
+} from '../../utils/responsive';
+
+const UserItemSkeleton = () => {
+    const pulse = useRef(new Animated.Value(0.6)).current;
+    useEffect(() => {
+        Animated.loop(
+            Animated.sequence([
+                Animated.timing(pulse, { toValue: 1, duration: 800, useNativeDriver: true }),
+                Animated.timing(pulse, { toValue: 0.6, duration: 800, useNativeDriver: true }),
+            ])
+        ).start();
+    }, []);
+
+    return (
+        <Animated.View style={[styles.skeletonUserItem, { opacity: pulse }]}>
+            <View style={styles.skeletonAvatar} />
+            <View style={styles.skeletonUserInfo}>
+                <View style={styles.skeletonUserName} />
+                <View style={styles.skeletonUserMessage} />
+            </View>
+        </Animated.View>
+    );
+};
 
 export default function Inbox() {
-    const { user } = useUser();
+    const { user } = useFirebaseAuth();
     const [userList, setUserList] = useState([]);
-    const [loader, setLoader] = useState(false);
+    const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        if (user) {
-            console.log("User Email:", user?.primaryEmailAddress?.emailAddress);
-            GetUserList();
-        }
-    }, [user]);
-
-    const GetUserList = async () => {
-        setLoader(true);
+    const fetchUserList = useCallback(async () => {
+        setLoading(true);
         try {
             const userEmail = user?.primaryEmailAddress?.emailAddress?.toLowerCase();
-            console.log("Querying Firestore with email:", userEmail);
-
             if (!userEmail) {
                 console.warn("User email is undefined.");
-                setLoader(false);
+                setUserList([]);
                 return;
             }
 
-            // Querying Firestore where userEmail exists in userIds array
             const q = query(collection(db, 'Chat'), where('userIds', 'array-contains', userEmail));
             const querySnapshot = await getDocs(q);
-            console.log("Query Snapshot Size:", querySnapshot.size);
-
             const users = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             setUserList(users);
         } catch (error) {
             console.error('Error fetching user list:', error);
         } finally {
-            setLoader(false);
+            setLoading(false);
         }
-    };
+    }, [user]);
 
-    const MapOtherUserList = () => {
+    useFocusEffect(
+        useCallback(() => {
+            if (user) {
+                fetchUserList();
+            }
+        }, [user, fetchUserList])
+    );
+
+    const mappedUsers = useMemo(() => {
         const currentUserEmail = user?.primaryEmailAddress?.emailAddress?.toLowerCase();
+        if (!currentUserEmail) return [];
 
-        const mappedUsers = userList
+        return userList
             .map((record) => {
                 if (!record.users || !Array.isArray(record.users)) {
                     console.warn("Invalid users array in record:", record);
                     return null;
                 }
-
-                // Find the other user details in the chat
                 const otherUser = record.users.find(u => u.email.toLowerCase() !== currentUserEmail);
                 if (!otherUser) {
                     console.warn("No other user found in chat record:", record);
                     return null;
                 }
-
                 return {
                     docId: record.id,
                     email: otherUser.email,
@@ -81,10 +98,7 @@ export default function Inbox() {
                 };
             })
             .filter(Boolean);
-
-        console.log("Mapped Users List:", mappedUsers);
-        return mappedUsers;
-    };
+    }, [userList, user]);
 
 
     const renderEmptyState = () => (
@@ -114,11 +128,8 @@ export default function Inbox() {
         </View>
     );
 
-    const mappedUsers = MapOtherUserList();
-
     return (
         <View style={styles.container}>
-            {/* Header */}
             <LinearGradient
                 colors={['#667eea', '#764ba2']}
                 style={styles.headerGradient}
@@ -133,26 +144,28 @@ export default function Inbox() {
                     </View>
                     <TouchableOpacity
                         style={styles.refreshButton}
-                        onPress={GetUserList}
+                        onPress={fetchUserList}
+                        disabled={loading}
                     >
-                        <MaterialIcons name="refresh" size={24} color="white" />
+                        <MaterialIcons name="refresh" size={24} color={loading ? 'rgba(255,255,255,0.5)' : 'white'} />
                     </TouchableOpacity>
                 </View>
             </LinearGradient>
 
-            {/* Content */}
             <View style={styles.contentContainer}>
-                {loader ? (
-                    <View style={styles.loadingContainer}>
-                        <ActivityIndicator size="large" color="#667eea" />
-                        <Text style={styles.loadingText}>Loading conversations...</Text>
-                    </View>
+                {loading ? (
+                    <FlatList
+                        data={Array(8).fill(0)}
+                        keyExtractor={(_, index) => `skeleton-${index}`}
+                        renderItem={() => <UserItemSkeleton />}
+                        showsVerticalScrollIndicator={false}
+                    />
                 ) : (
                     <FlatList
                         data={mappedUsers}
                         keyExtractor={(item) => item.docId}
-                        refreshing={loader}
-                        onRefresh={GetUserList}
+                        refreshing={loading}
+                        onRefresh={fetchUserList}
                         renderItem={({ item }) => <UserItem userInfo={item} />}
                         ListEmptyComponent={renderEmptyState}
                         showsVerticalScrollIndicator={false}
@@ -274,5 +287,36 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: 'bold',
         fontFamily: 'PermanentMarker-Regular',
+    },
+    skeletonUserItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: spacing.md,
+        backgroundColor: '#f0f2f5',
+        borderRadius: 12,
+        marginBottom: spacing.md,
+    },
+    skeletonAvatar: {
+        width: 60,
+        height: 60,
+        borderRadius: 30,
+        backgroundColor: '#e0e0e0',
+        marginRight: spacing.md,
+    },
+    skeletonUserInfo: {
+        flex: 1,
+    },
+    skeletonUserName: {
+        width: '60%',
+        height: 20,
+        backgroundColor: '#e0e0e0',
+        borderRadius: 4,
+        marginBottom: spacing.sm,
+    },
+    skeletonUserMessage: {
+        width: '80%',
+        height: 16,
+        backgroundColor: '#e0e0e0',
+        borderRadius: 4,
     },
 });

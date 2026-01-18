@@ -2,10 +2,10 @@ import { View, Text, TextInput, StyleSheet, TouchableOpacity } from 'react-nativ
 import React, { useState } from 'react';
 import { MaterialIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import colors from '../../theme/colors';
+import typography from '../../theme/typography';
 import {
     spacing,
-    fontSize,
-    iconSize,
     borderRadius,
     shadow,
     deviceInfo,
@@ -57,28 +57,40 @@ export default function SearchBar({ onSearch, onFilter }) {
         <View style={styles.container}>
             <View style={styles.searchContainer}>
                 <View style={styles.searchInputContainer}>
-                    <MaterialIcons name="search" size={24} color="#999" style={styles.searchIcon} />
+                    <MaterialIcons name="search" size={24} color={colors.textSecondary} style={styles.searchIcon} />
                     <TextInput
                         style={styles.searchInput}
                         placeholder="Search for pets..."
-                        placeholderTextColor="#999"
+                        placeholderTextColor={colors.textSecondary}
                         value={searchText}
                         onChangeText={handleSearch}
                         returnKeyType="search"
+                        accessibilityLabel="Search pets"
+                        accessibilityHint="Enter pet name, breed, or location"
                     />
                     {searchText.length > 0 && (
-                        <TouchableOpacity onPress={clearSearch} style={styles.clearButton}>
-                            <MaterialIcons name="close" size={20} color="#999" />
+                        <TouchableOpacity
+                            onPress={clearSearch}
+                            style={styles.clearButton}
+                            accessibilityRole="button"
+                            accessibilityLabel="Clear search"
+                        >
+                            <MaterialIcons name="close" size={20} color={colors.textSecondary} />
                         </TouchableOpacity>
                     )}
                 </View>
 
-                <TouchableOpacity style={styles.filterButton} onPress={toggleFilter}>
+                <TouchableOpacity
+                    style={styles.filterButton}
+                    onPress={toggleFilter}
+                    accessibilityRole="button"
+                    accessibilityLabel="Filter pets"
+                >
                     <LinearGradient
-                        colors={['#667eea', '#764ba2']}
+                        colors={[colors.primary, colors.secondary]}
                         style={styles.filterButtonGradient}
                     >
-                        <MaterialIcons name="tune" size={24} color="white" />
+                        <MaterialIcons name="tune" size={24} color={colors.textLight} />
                     </LinearGradient>
                 </TouchableOpacity>
             </View>
@@ -91,24 +103,30 @@ export default function SearchBar({ onSearch, onFilter }) {
                         style={styles.quickFilterChip}
                         onPress={() => handleQuickFilter('nearby')}
                         activeOpacity={0.7}
+                        accessibilityRole="button"
+                        accessibilityLabel="Filter by nearby pets"
                     >
-                        <MaterialIcons name="location-on" size={16} color="#667eea" />
+                        <MaterialIcons name="location-on" size={16} color={colors.primary} />
                         <Text style={styles.quickFilterText}>Nearby</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                         style={styles.quickFilterChip}
                         onPress={() => handleQuickFilter('popular')}
                         activeOpacity={0.7}
+                        accessibilityRole="button"
+                        accessibilityLabel="Filter by popular pets"
                     >
-                        <MaterialIcons name="favorite" size={16} color="#ff6b6b" />
+                        <MaterialIcons name="favorite" size={16} color={colors.secondary} />
                         <Text style={styles.quickFilterText}>Popular</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                         style={styles.quickFilterChip}
                         onPress={() => handleQuickFilter('recent')}
                         activeOpacity={0.7}
+                        accessibilityRole="button"
+                        accessibilityLabel="Filter by recent pets"
                     >
-                        <MaterialIcons name="schedule" size={16} color="#4ecdc4" />
+                        <MaterialIcons name="schedule" size={16} color={colors.info} />
                         <Text style={styles.quickFilterText}>Recent</Text>
                     </TouchableOpacity>
                 </View>
@@ -131,13 +149,13 @@ const styles = StyleSheet.create({
         flex: 1,
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: 'white',
+        backgroundColor: colors.surface,
         borderRadius: borderRadius.xl,
         paddingHorizontal: spacing.lg,
         paddingVertical: deviceInfo.isTablet ? spacing.lg : spacing.md,
         ...shadow.medium,
         borderWidth: 1,
-        borderColor: '#f0f0f0',
+        borderColor: colors.border,
         minHeight: components.input.height,
     },
     searchIcon: {
@@ -145,9 +163,9 @@ const styles = StyleSheet.create({
     },
     searchInput: {
         flex: 1,
-        fontSize: deviceInfo.isTablet ? fontSize.xl : fontSize.lg,
-        color: '#333',
-        fontFamily: 'Pacifico-Regular',
+        fontSize: deviceInfo.isTablet ? 18 : 16,
+        color: colors.text,
+        fontFamily: typography.fontFamily.accent,
     },
     clearButton: {
         padding: spacing.xs,
@@ -156,7 +174,7 @@ const styles = StyleSheet.create({
         borderRadius: borderRadius.xl,
         overflow: 'hidden',
         ...shadow.medium,
-        shadowColor: '#667eea',
+        shadowColor: colors.primary,
     },
     filterButtonGradient: {
         width: components.button.height,
@@ -168,9 +186,9 @@ const styles = StyleSheet.create({
         marginTop: spacing.sm,
     },
     quickFiltersTitle: {
-        fontSize: deviceInfo.isTablet ? fontSize.lg : fontSize.md,
-        color: '#666',
-        fontFamily: 'PermanentMarker-Regular',
+        fontSize: deviceInfo.isTablet ? 18 : 16,
+        color: colors.textSecondary,
+        fontFamily: typography.fontFamily.heading,
         marginBottom: spacing.sm,
     },
     quickFiltersContainer: {
@@ -181,7 +199,7 @@ const styles = StyleSheet.create({
     quickFilterChip: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: 'white',
+        backgroundColor: colors.surface,
         paddingHorizontal: spacing.md,
         paddingVertical: spacing.sm,
         borderRadius: borderRadius.lg,
@@ -190,8 +208,8 @@ const styles = StyleSheet.create({
         minHeight: deviceInfo.isTablet ? 40 : 32,
     },
     quickFilterText: {
-        fontSize: deviceInfo.isTablet ? fontSize.md : fontSize.sm,
-        color: '#666',
-        fontFamily: 'PermanentMarker-Regular',
+        fontSize: deviceInfo.isTablet ? 16 : 14,
+        color: colors.textSecondary,
+        fontFamily: typography.fontFamily.heading,
     },
 });

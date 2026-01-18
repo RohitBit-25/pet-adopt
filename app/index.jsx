@@ -1,22 +1,24 @@
-import { useUser } from "@clerk/clerk-expo";
-import { Redirect } from "expo-router";
-import { View } from "react-native";
+import { View, ActivityIndicator, Text } from "react-native";
+import { useAuthNavigation } from "../hooks/useAuthNavigation";
+import ErrorBoundary from "../components/ErrorBoundary";
 
-export default function Index() {
+function Index() {
+  useAuthNavigation();
 
-  const { user } = useUser();
   return (
-    <View
-      style={{
-        flex: 1,
-
-      }}
-    >
-      {
-        user ?
-          <Redirect href={'/(tabs)/home'} />
-          : <Redirect href={'/login'} />}
-
+    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#667eea' }}>
+      <ActivityIndicator size="large" color="white" />
+      <Text style={{ color: 'white', marginTop: 10, fontSize: 16, textAlign: 'center' }}>
+        Loading PetAdopt...
+      </Text>
     </View>
+  );
+}
+
+export default function App() {
+  return (
+    <ErrorBoundary>
+      <Index />
+    </ErrorBoundary>
   );
 }
