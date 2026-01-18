@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { View, Text, Pressable, StyleSheet } from 'react-native'
 import React, { useEffect, useState, useRef } from 'react'
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -19,6 +20,17 @@ export default function MarkFav({ pet, color = '#ff6b6b' }) {
     const [isAnimating, setIsAnimating] = useState(false);
     const lottieRef = useRef();
 
+=======
+import { View, Text, Pressable } from 'react-native'
+import React, { useEffect, useState } from 'react'
+import Ionicons from '@expo/vector-icons/Ionicons';
+import Shared from './../Shared/Shared'
+import { useUser } from '@clerk/clerk-expo';
+
+export default function MarkFav({ pet, color = 'black' }) {
+    const { user } = useUser();
+    const [favList, setFavList] = useState();
+>>>>>>> fcc6cfee889dd6e44b875c662480aee43fe8b803
     useEffect(() => {
         user && GetFav();
     }, [user])
@@ -41,6 +53,7 @@ export default function MarkFav({ pet, color = '#ff6b6b' }) {
         await Shared.UpdateFav(user, favResult);
         GetFav();
     }
+<<<<<<< HEAD
 
     const handleToggleFav = async () => {
         if (favList?.includes(pet.id)) {
@@ -101,3 +114,19 @@ const styles = StyleSheet.create({
 });
 
 
+=======
+    return (
+        <View>
+            {favList?.includes(pet.id) ?
+                <Pressable onPress={removeFromFav}>
+
+                    <Ionicons name="heart" size={30} color="red" />
+                </Pressable> :
+                <Pressable onPress={() => AddToFav()}>
+
+                    <Ionicons name="heart-outline" size={30} color={color} />
+                </Pressable>}
+        </View>
+    )
+}
+>>>>>>> fcc6cfee889dd6e44b875c662480aee43fe8b803

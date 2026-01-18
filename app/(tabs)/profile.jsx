@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Alert } from 'react-native';
 import React, { useState, useEffect } from 'react';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -231,3 +232,15 @@ const styles = StyleSheet.create({
 });
 
 export default withSafeComponent(ProfileScreen);
+=======
+import { View, Text } from 'react-native'
+import React from 'react'
+
+export default function Profile() {
+    return (
+        <View>
+            <Text>Profile</Text>
+        </View>
+    )
+}
+>>>>>>> fcc6cfee889dd6e44b875c662480aee43fe8b803

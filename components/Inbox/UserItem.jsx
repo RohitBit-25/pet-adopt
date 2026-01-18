@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { View, Text, Image, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
 import React from 'react';
 import { router } from 'expo-router';
@@ -59,11 +60,29 @@ export default function UserItem({ userInfo }) {
                 <MaterialIcons name="chevron-right" size={24} color="#ccc" />
             </View>
         </TouchableOpacity>
+=======
+import { View, Text, Image, StyleSheet } from 'react-native';
+import React from 'react';
+
+export default function UserItem({ userInfo }) {
+    return (
+        <View>
+            <View style={styles.container}>
+                <Image
+                    source={{ uri: userInfo?.imageUrl || 'https://via.placeholder.com/40' }}
+                    style={styles.avatar}
+                />
+                <Text style={styles.userName}>{userInfo?.name || 'Unknown User'}</Text>
+            </View>
+            <View style={styles.separator} />
+        </View>
+>>>>>>> fcc6cfee889dd6e44b875c662480aee43fe8b803
     );
 }
 
 const styles = StyleSheet.create({
     container: {
+<<<<<<< HEAD
         marginBottom: 12,
     },
     userItemCard: {
@@ -148,5 +167,26 @@ const styles = StyleSheet.create({
         color: 'white',
         fontSize: 12,
         fontWeight: 'bold',
+=======
+        marginVertical: 7,
+        flexDirection: 'row',
+        gap: 10,
+        alignItems: 'center',
+    },
+    avatar: {
+        width: 40,
+        height: 40,
+        borderRadius: 99,
+    },
+    userName: {
+        fontFamily: 'PermanentMarker-Regular',
+        fontSize: 20,
+    },
+    separator: {
+        borderWidth: 0.5,
+        marginVertical: 7,
+        borderColor: 'gray',
+        opacity: 0.5,
+>>>>>>> fcc6cfee889dd6e44b875c662480aee43fe8b803
     },
 });

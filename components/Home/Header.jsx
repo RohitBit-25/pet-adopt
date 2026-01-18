@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native'
 import React, { useState, useEffect } from 'react'
 import { MaterialIcons } from '@expo/vector-icons'
@@ -216,3 +217,33 @@ const styles = StyleSheet.create({
 });
 
 export default withSafeComponent(Header, 'Header');
+=======
+import { View, Text, Image } from 'react-native'
+import React from 'react'
+import { useUser } from '@clerk/clerk-expo'
+
+export default function Header() {
+    const { user } = useUser();
+    return (
+        <View style={{
+            display: 'flex',
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+
+        }}>
+            <View>
+                <Text style={{
+                    fontFamily: 'PermanentMarker-Regular',
+                    fontSize: 18
+                }}>Welcome,</Text>
+                <Text style={{
+                    fontFamily: 'Pacifico-Regular',
+                    fontSize: 25
+                }}>{user?.fullName}</Text>
+            </View>
+            <Image source={{ uri: user?.imageUrl }} style={{ width: 40, height: 40, borderRadius: 99 }} />
+        </View>
+    )
+}
+>>>>>>> fcc6cfee889dd6e44b875c662480aee43fe8b803
